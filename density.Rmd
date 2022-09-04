@@ -67,7 +67,7 @@ pop %>%
         expand = c(0, 0.00, 0, 0.01),
         sec.axis = dup_axis(
             breaks = interp$density,
-            labels = c("3k", "10k", "15k"),
+            labels = c("15k", "10k", "3k"),
             name = NULL
         )
     ) +
