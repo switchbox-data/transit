@@ -1,6 +1,6 @@
 ---
 title: "pop density"
-output: html_document
+output: pdf_document
 date: '2022-09-06'
 ---
 
@@ -31,7 +31,7 @@ pop <- pop %>%
         density = population / area
     ) %>%
     filter(population > 0) %>%
-    arrange(density) %>%
+    arrange(desc(density)) %>%
     st_set_geometry(NULL) %>%
     mutate(density = drop_units(density)) %>%
     mutate(fraction = cumsum(population) / sum(population))
@@ -42,7 +42,7 @@ pop <- pop %>%
 ```{r}
 interp <- pop %>%
     complete(density = c(3000, 10000, 15000)) %>%
-    arrange(density) %>%
+    arrange(desc(density)) %>%
     mutate(fraction = zoo::na.approx(fraction, na.rm = FALSE)) %>%
     filter(density == 3000 | density == 10000 | density == 15000) %>%
     select(density, fraction)
