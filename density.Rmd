@@ -1,0 +1,82 @@
+---
+title: "pop density"
+output: html_document
+date: '2022-09-06'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
+library(sf)
+library(tidyverse)
+library(tidycensus)
+library(tidytransit)
+library(units)
+```
+
+```{r, include=FALSE}
+pop <- get_decennial(
+    geography = "tract",
+    state = "NY",
+    variables = "P1_001N",
+    year = 2020,
+    geometry = TRUE
+) %>%
+    rename(population = value) %>%
+    select(-variable)
+
+pop <- pop %>%
+    mutate(
+        area = (geometry %>% st_set_crs("epsg:4269") %>% st_area()),
+        area = units::set_units(area, mi^2),
+        density = population / area
+    ) %>%
+    filter(population > 0) %>%
+    arrange(density) %>%
+    st_set_geometry(NULL) %>%
+    mutate(density = drop_units(density)) %>%
+    mutate(fraction = cumsum(population) / sum(population))
+```
+
+# Fraction of population at given population density
+
+```{r}
+interp <- pop %>%
+    complete(density = c(3000, 10000, 15000)) %>%
+    arrange(density) %>%
+    mutate(fraction = zoo::na.approx(fraction, na.rm = FALSE)) %>%
+    filter(density == 3000 | density == 10000 | density == 15000) %>%
+    select(density, fraction)
+
+pop %>%
+    ggplot(aes(density, fraction)) +
+    geom_line() +
+    geom_vline(
+        xintercept = interp$density,
+        color = "red",
+        alpha = 0.3,
+        linetype = "dashed"
+    ) +
+    geom_hline(
+        yintercept = interp$fraction,
+        color = "red",
+        alpha = 0.3,
+        linetype = "dashed"
+    ) +
+    scale_x_continuous(
+        limits = c(0, 50000),
+        expand = c(0, 0.00, 0, 0.01),
+        sec.axis = dup_axis(
+            breaks = interp$density,
+            labels = c("3k", "10k", "15k"),
+            name = NULL
+        )
+    ) +
+    scale_y_continuous(
+        expand = c(0, 0.00, 0, 0.01),
+        sec.axis = dup_axis(
+            breaks = interp$fraction,
+            labels = function(x) as.character(round(x, 2)),
+            name = NULL
+        )
+    ) + xlab("density [1 / mi^2]")
+```
